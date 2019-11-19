@@ -1,0 +1,46 @@
+de:
+  general:
+    title: "Tally Zoo"
+    today: "Heute"
+    topic: "Thema"
+    mood: "Stimmung"
+    note: "Notiz"
+    edit: "Bearbeiten"
+    stop_edit: "Bearbeiten beenden"
+    cancel: "Abbrechen"
+    save: "Speichern"
+    submit: "Weiter"
+    remember: "Anmeldedaten speichern"
+    wrongPassword: "Fehler: ungültiges Passwort"
+    wrongCookiePassword: "Error: ungültiges Passwort im Browser gespeichert"
+    error: "fehlende oder fehlerhafte Parameter"
+    enterPassword: "Deine Daten sind verschlüsselt. Gib dein Passwort ein, um sie zu entschlüsseln!"
+    configuration_menu: "Konfiguration"
+  config:
+    title: "Verbindung zum Personal Data Store"
+    intro: "Wähle den Verbindungstyp zum Personal Data Store und gib dann die notwendigen Verbindungsdaten ein!"
+    type_label: "Typ"
+    select_label: "wählen"
+    app-key_label: "Kennung"
+    app-secret_label: "Geheimnis"
+    password_label: "Passwort"
+    username_label: "Benutzername"
+  footer:
+    about: "Über OwnYourData.eu"
+    mobile: "Mobiler Datentresor"
+    feedback: "Feedback senden"
+    info: "Infos für App-Entwickler"
+    security: "Datensicherheit"
+    privacy: "Datenschutz"
+    privacy_url: "https://www.ownyourdata.eu/de/privacy-policy"
+    imprint: "Impressum"
+    imprint_url: "https://www.ownyourdata.eu/de/impressum/"
+    language: "Sprache"
+  dialog:
+    newEntry: "Neuer Eintrag"
+    dateLbl: "Datum"
+  date:
+    day_names: [Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag]
+    month_names: [~, Jänner, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember]
+    formats:
+      long: '%A, %-d. %B %Y'

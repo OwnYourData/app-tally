@@ -1,0 +1,89 @@
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<h1><%= t('config.title') %></h1>
+			<p><%= t('config.intro') %></p>
+		</div>
+		<div class="col-md-12">
+		    <% flash.each do |message_type, message| %>
+		        <div class="alert alert-<%= message_type %>"><%= message %></div>
+		    <% end %>
+		</div>
+	</div>
+	<%= form_with url: topics_path, html: { class: "form-horizontal" }, role: "form" do |form| %>
+		<div class="form-group">
+			<label for="pds_type" class="col-sm-3 control-label"><%= t('config.type_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.select :pds_type, 
+					options_for_select(
+						{ t('config.select_label') => "select",
+						  "CEPS": "ceps",
+						  "OwnYourData": "oyd" },
+						params[:ceps_type] || "select" ),
+					{},
+					class: "from-control",
+					style: "margin-top: 5px;",
+					onchange: "$('.PDS').hide(); $('.'.concat($('#pds_type').val().toUpperCase())).show();" %>
+			</div>
+		</div>
+		<div class="form-group PDS OYD" style="display: none;">
+			<label for="pia_url" class="col-sm-3 control-label">Data Vault URL:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :PIA_URL, value: @pia_url, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS OYD" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.app-key_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :APP_KEY, value: @app_key, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS OYD" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.app-secret_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :APP_SECRET, value: @app_secret, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS OYD" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.password_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.password_field :password, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+
+		<div class="form-group PDS CEPS" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label">Data Store URL:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :CEPS_URL, value: @ceps_url, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS CEPS" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.username_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :CEPS_USER, value: @ceps_user, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS CEPS" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.password_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.password_field :CEPS_PASSWORD, value: @ceps_password, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+
+		<div class="form-group PDS OYD CEPS" style="display: none;">
+			<div class="col-sm-offset-3 col-sm-9">
+				<div class="checkbox">
+			    	<label>
+			    		<%= form.check_box :remember, style: "width: inherit;" %>
+			    		<%= t('general.remember') %>
+					</label>
+				</div>
+			</div>
+		</div>
+		<div class="form-group PDS OYD CEPS" style="display: none;">
+			<div class="col-sm-offset-3 col-sm-9">
+				<%= form.button t('general.submit') %>
+			</div>
+		</div>
+	<% end %>
+</div>
