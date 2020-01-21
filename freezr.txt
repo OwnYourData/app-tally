@@ -1,0 +1,20 @@
+
+
+get Password from: https://salmanff-test-freezr.glitch.me/account/app_management
+
+curl -H "Content-Type: application/json" -d '{"user_id": "christoph", "password": "nIlrEily4OG65BwfopM7", "app_name":"eu.oyd.tallyzoo"}' -X POST https://salmanff-test-freezr.glitch.me/ceps/app_token
+
+app_token: 9VIXaidHF9265ffq1CG5QHOY4tMV50WmqugRWqUfXb3dZyzqc4
+
+curl -H "Authorization: Bearer 9VIXaidHF9265ffq1CG5QHOY4tMV50WmqugRWqUfXb3dZyzqc4" -H "Content-Type: application/json" -d '{"data": {"hello" :"world"} }' -X POST https://salmanff-test-freezr.glitch.me/ceps/write/eu.oyd.tallyzoo
+
+curl -H "Authorization: Bearer 9VIXaidHF9265ffq1CG5QHOY4tMV50WmqugRWqUfXb3dZyzqc4" -H "Content-Type: application/json" https://salmanff-test-freezr.glitch.me/ceps/read/eu.oyd.tallyzoo
+
+
+curl -H "Authorization: Bearer 9VIXaidHF9265ffq1CG5QHOY4tMV50WmqugRWqUfXb3dZyzqc4" -H "Content-Type: application/json" -d '{"data": {"hello" :"world"}, "update": true, "data_object_id": "7wWAeMnQKr9HuJVb" }' -X POST https://salmanff-test-freezr.glitch.me/ceps/write/eu.oyd.tallyzoo
+
+Connection
+CEPS
+https://salmanff-test-freezr.glitch.me
+christoph
+9WiTuJLMAESRNZJkYyDW

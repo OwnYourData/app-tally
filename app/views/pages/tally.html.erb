@@ -1,0 +1,61 @@
+<%= form_with url: increment_path, id: "tally_form" do |form| %>
+	<%= form.hidden_field :tally_repo %>
+	<%= form.hidden_field :tally_name %>
+	<%= form.hidden_field :tally_command %>
+	<%= form.hidden_field :tally_increment, value: "1" %>
+	<div class="row" style="padding-right: 15px;">
+		<%= render partial: "topic", collection: @topics %>
+
+		<div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom: 25px; padding-right: 0;">
+			<%= link_to "#", data: { toggle: "modal", target: "#topicModal"}, style: "text-decoration: none;" do %>
+				<div style="height: 75px; background-color: #FFEDB5; border-radius: 8px 8px 0 0; cursor: pointer;border-top: #C7A951 2px solid;border-left: #C7A951 2px solid;border-right: #C7A951 2px solid;">
+					<div style="padding: 10px; text-align: center;">
+						<i class="fa fa-plus" aria-hidden="true" style="font-size: 20px; margin-top: 20px; color: #806D34"></i>
+					</div>
+				</div>
+				<div style="height: 30px; background-color: #FFD969; border-radius: 0  0 8px 8px;border-bottom: #C7A951 2px solid;border-left: #C7A951 2px solid;border-right: #C7A951 2px solid;">
+					<div style="padding: 4px 10px; text-align: center; color: #806D34">
+						<%= t('general.new_topic') %>
+					</div>
+				</div>
+			<% end %>
+		</div>
+
+	</div>
+<% end %>
+
+<!-- Text Modal -->
+<div class="modal fade" id="topicModal" tabindex="-1" role="dialog" aria-labelledby="detailsHeader_text">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title" id="detailsHeader_text"><%= t('dialog.newEntry') %></h4>
+			</div>
+			<%= form_with url: new_topic_path do |form| %>
+				<div class="modal-body">
+					<div class="input-group" style="width: 100%;">
+						<label for="topic_name"><%= t('general.topic') %>:</label>
+						<%= form.text_field :topic_name, style: 'width:100%; color:black; font-size: 16px;' %>
+					</div>
+					<div class="input-group" style="width: 100%; margin-top: 15px;">
+						<label for="topic_color"><%= t('general.topic_color') %>:</label>&nbsp;
+			            <%= form.collection_select(:topic_color,
+			                  { t('color.turquoise') => "cyan",
+			                  	t('color.green')     => "green",
+			                  	t('color.yellow')    => "yellow",
+			                    t('color.purple')    => "purple" }, 
+			                  :last, :first, { selected: "cyan" }, 
+			                  multiple: false, id: "dg-topic_color", class: "selectpicker", style: "margin-bottom: 10px; font-size: 16px;" ) %>
+			        </div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal"><%= t('general.cancel') %></button>
+					<%= form.button t('general.save'), 
+							class: "btn btn-primary", style: "width: 200px;",
+							data: { disable_with: "<i class='fa fa-spinner fa-spin'></i> " + t('general.save') } %>
+				</div>
+			<% end %>
+		</div>
+	</div>
+</div>

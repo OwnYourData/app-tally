@@ -9,6 +9,7 @@ de:
     stop_edit: "Bearbeiten beenden"
     cancel: "Abbrechen"
     save: "Speichern"
+    delete: "Löschen"
     submit: "Weiter"
     remember: "Anmeldedaten speichern"
     wrongPassword: "Fehler: ungültiges Passwort"
@@ -16,6 +17,14 @@ de:
     error: "fehlende oder fehlerhafte Parameter"
     enterPassword: "Deine Daten sind verschlüsselt. Gib dein Passwort ein, um sie zu entschlüsseln!"
     configuration_menu: "Konfiguration"
+    new_topic: "neues Thema"
+    to_data_vault: "zum Datentresor"
+    rec_list: "Liste"
+  color:
+    turquoise: "türkis"
+    purple: "lila"
+    green: "grün"
+    yellow: "gelb"
   config:
     title: "Verbindung zum Personal Data Store"
     intro: "Wähle den Verbindungstyp zum Personal Data Store und gib dann die notwendigen Verbindungsdaten ein!"
@@ -37,7 +46,7 @@ de:
     imprint_url: "https://www.ownyourdata.eu/de/impressum/"
     language: "Sprache"
   dialog:
-    newEntry: "Neuer Eintrag"
+    newEntry: "Neues Thema"
     dateLbl: "Datum"
   date:
     day_names: [Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag]

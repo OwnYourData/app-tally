@@ -1,47 +1,7 @@
 class PagesController < ApplicationController
 	include ApplicationHelper
 
-	def topics
-		pds_type = params[:pds_type].to_s
-		if pds_type.to_s == ""
-			pds_type = session[:pds_type]
-			if pds_type.to_s == ""
-				pds_type = cookies.signed[:pds_type]
-			end
-		else
-			session[:pds_type] = pds_type
-		end
-
-		pia_url = params[:PIA_URL].to_s
-		if pia_url.to_s == ""
-			pia_url = session[:pia_url]
-			if pia_url.to_s == ""
-				pia_url = cookies.signed[:pia_url]
-			end
-		else
-			session[:pia_url] = pia_url
-		end
-
-		app_key = params[:APP_KEY].to_s
-		if app_key.to_s == ""
-			app_key = session[:app_key]
-			if app_key.to_s == ""
-				app_key = cookies.signed[:app_key]
-			end
-		else
-			session[:app_key] = app_key
-		end
-
-		app_secret = params[:APP_SECRET].to_s
-		if app_secret.to_s == ""
-			app_secret = session[:app_secret]
-			if app_secret.to_s == ""
-				app_secret = cookies.signed[:app_secret]
-			end
-		else
-			session[:app_secret] = app_secret
-		end
-
+	def tally
 		desktop = params[:desktop].to_s
 		if desktop == ""
 			desktop = session[:desktop]
@@ -61,119 +21,264 @@ class PagesController < ApplicationController
 				desktop = false
 			end
 		end
-		puts "Desktop:" + desktop.to_s
 		if desktop
 			session[:desktop] = "1"
 		else
 			session[:desktop] = "0"
 		end
 
-		nonce = params[:NONCE].to_s
-		if nonce.to_s == ""
-			nonce = session[:nonce].to_s
-			if nonce.to_s == ""
-				nonce = cookies.signed[:nonce].to_s
-			end
-		else
-			session[:nonce] = nonce
-		end
-
-		master_key = params[:MASTER_KEY].to_s
-		if master_key.to_s == ""
-			master_key = session[:master_key].to_s
-			if master_key.to_s == ""
-				master_key = cookies.signed[:master_key].to_s
-				if master_key == ""
-					nonce = ""
+		pds_type = params[:pds_type].to_s
+		if pds_type.to_s == ""
+			if params[:PIA_URL].to_s != ""
+				pds_type = "oyd"
+			else
+				pds_type = session[:pds_type]
+				if pds_type.to_s == ""
+					pds_type = cookies.signed[:pds_type]
+					if pds_type.to_s == ""
+						redirect_to app_config_path
+						return
+					end
 				end
 			end
-		else
-			session[:master_key] = master_key
+		end
+		if pds_type.to_s != ""
+			session[:pds_type] = pds_type
 		end
 
-		password = ""
-		if nonce == ""
-			password = params[:password].to_s
-		else
-			begin
-				# get cipher
-		        nonce_url = pia_url + '/api/support/' + nonce
-		        response = HTTParty.get(nonce_url)
-		        if response.code == 200
-		        	cipher = response.parsed_response["cipher"]
-		        	cipherHex = [cipher].pack('H*')
-		            nonceHex = [nonce].pack('H*')
-	            	keyHash = [master_key].pack('H*')
-	            	private_key = RbNaCl::PrivateKey.new(keyHash)
-	            	authHash = RbNaCl::Hash.sha256('auth'.force_encoding('ASCII-8BIT'))
-	            	auth_key = RbNaCl::PrivateKey.new(authHash).public_key
-	            	box = RbNaCl::Box.new(auth_key, private_key)
-	            	password = box.decrypt(nonceHex, cipherHex)
+		case pds_type
+		when "oyd"
+			pia_url = params[:PIA_URL].to_s
+			if pia_url.to_s == ""
+				pia_url = session[:pia_url]
+				if pia_url.to_s == ""
+					pia_url = cookies.signed[:pia_url]
+				end
+			end
+			if pia_url.to_s != ""
+				session[:pia_url] = pia_url
+			end
+			host_url = pia_url
 
-		        	# write to cookies in any case if NONCE is provided in URL
+			app_key = params[:APP_KEY].to_s
+			if app_key.to_s == ""
+				app_key = session[:app_key]
+				if app_key.to_s == ""
+					app_key = cookies.signed[:app_key]
+				end
+			end
+			if app_key.to_s != ""
+				session[:app_key] = app_key
+			end
+
+			app_secret = params[:APP_SECRET].to_s
+			if app_secret.to_s == ""
+				app_secret = session[:app_secret]
+				if app_secret.to_s == ""
+					app_secret = cookies.signed[:app_secret]
+				end
+			end
+			if app_secret.to_s != ""
+				session[:app_secret] = app_secret
+			end
+
+			app = setupApp(pia_url, app_key, app_secret)
+			session[:oyd_app] = app
+
+			token = app["token"]
+			if token == ""
+				redirect_to app_config_path(pia_url: pia_url)
+				return
+			end
+
+			nonce = params[:NONCE].to_s
+			if nonce.to_s == ""
+				nonce = session[:nonce].to_s
+				if nonce.to_s == ""
+					nonce = cookies.signed[:nonce].to_s
+				end
+			end
+			if nonce.to_s != ""
+				session[:nonce] = nonce
+			end
+
+			master_key = params[:MASTER_KEY].to_s
+			if master_key.to_s == ""
+				master_key = session[:master_key].to_s
+				if master_key.to_s == ""
+					master_key = cookies.signed[:master_key].to_s
+					if master_key == ""
+						nonce = ""
+					end
+				end
+			end
+			if master_key.to_s != ""
+				session[:master_key] = master_key
+			end
+
+			password = params[:password].to_s
+			if password.to_s == "" && nonce.to_s == ""
+				password = session[:password].to_s
+				if password.to_s == "" && nonce.to_s == ""
+					password = cookies.signed[:password]
+					if password.to_s != ""
+						cookie_password = true
+					end
+				end
+			else
+				session[:password] = password
+				if params[:remember].to_s == "1"
+					cookies.permanent.signed[:pds_type] = pds_type
 					cookies.permanent.signed[:pia_url] = pia_url
 					cookies.permanent.signed[:app_key] = app_key
 					cookies.permanent.signed[:app_secret] = app_secret
 					cookies.permanent.signed[:password] = password
+				end
+			end
+			if password.to_s == "" && nonce != ""
+				begin
+					# get cipher
+			        nonce_url = pia_url + '/api/support/' + nonce
+			        response = HTTParty.get(nonce_url)
+			        if response.code == 200
+			        	cipher = response.parsed_response["cipher"]
+			        	cipherHex = [cipher].pack('H*')
+			            nonceHex = [nonce].pack('H*')
+		            	keyHash = [master_key].pack('H*')
+		            	private_key = RbNaCl::PrivateKey.new(keyHash)
+		            	authHash = RbNaCl::Hash.sha256('auth'.force_encoding('ASCII-8BIT'))
+		            	auth_key = RbNaCl::PrivateKey.new(authHash).public_key
+		            	box = RbNaCl::Box.new(auth_key, private_key)
+		            	password = box.decrypt(nonceHex, cipherHex)
 
-		        end
-		    rescue
-		    	password = ""
+			        	# write to cookies in any case if NONCE is provided in URL
+						cookies.permanent.signed[:pia_url] = pia_url
+						cookies.permanent.signed[:app_key] = app_key
+						cookies.permanent.signed[:app_secret] = app_secret
+						cookies.permanent.signed[:password] = password
+						cookies.permanent.signed[:pds_type] = pds_type
+			        end
+			    rescue
+			    	password = ""
+			    end
 		    end
-	    end
-		cookie_password = false
-		if password.to_s == ""
-			password = session[:password].to_s
+
 			if password.to_s == ""
-				password = cookies.signed[:password]
-				if password.to_s != ""
-					cookie_password = true
+				password = session[:password].to_s
+				if password.to_s == ""
+					password = cookies.signed[:password]
+				end
+			end
+
+			cookie_password = false
+			if password.to_s == ""
+				redirect_to password_path(pia_url: pia_url, app_key: app_key, app_secret: app_secret)
+				return
+			else
+				app["password"] = password.to_s
+				session[:password] = password
+			end
+
+			# app["password"] = password.to_s
+			# if getReadKey(app).nil?
+			# 	if cookie_password
+			# 		flash[:warning] = t('general.wrongCookiePassword')
+			# 	else
+			# 		flash[:warning] = t('general.wrongPassword')
+			# 	end
+			# 	redirect_to password_path(pia_url: pia_url, app_key: app_key, app_secret: app_secret)
+			# 	return
+			# end
+
+			@pia_url = pia_url
+			@app_key = app_key
+			@app_secret = app_secret
+
+		when "ceps"
+			ceps_url = params[:CEPS_URL].to_s
+			if ceps_url.to_s == ""
+				ceps_url = session[:ceps_url]
+				if ceps_url.to_s == ""
+					ceps_url = cookies.signed[:ceps_url]
+				end
+			end
+			if ceps_url.to_s != "" 
+				session[:ceps_url] = ceps_url
+			end
+			host_url = ceps_url
+
+			ceps_user = params[:CEPS_USER].to_s
+			if ceps_user.to_s == ""
+				ceps_user = session[:ceps_user]
+				if ceps_user.to_s == ""
+					ceps_user = cookies.signed[:ceps_user]
+				end
+			end
+			if ceps_user.to_s != ""
+				session[:ceps_user] = ceps_user
+			end
+
+			ceps_password = params[:CEPS_PASSWORD].to_s
+			if ceps_password.to_s == ""
+				ceps_password = session[:ceps_password]
+				if ceps_password.to_s == ""
+					ceps_password = cookies.signed[:ceps_password]
+				end
+			end
+			if ceps_password.to_s != ""
+				session[:ceps_password] = ceps_password
+			end
+
+			token = session[:ceps_token].to_s
+			if token == ""
+				token = cookies.signed[:ceps_token].to_s
+				if token == ""
+					token = getCepsToken(ceps_url, ceps_user, ceps_password)
+					if token.nil? || token == ""
+						redirect_to app_config_path
+						return
+					end
+					session[:ceps_token] = token
+					if params[:remember].to_s == "1"
+						cookies.permanent.signed[:ceps_token] = token
+					end
 				end
 			end
 		else
-			session[:password] = password
-			if params[:remember].to_s == "1"
-				cookies.permanent.signed[:pds_type] = pds_type
-				cookies.permanent.signed[:pia_url] = pia_url
-				cookies.permanent.signed[:app_key] = app_key
-				cookies.permanent.signed[:app_secret] = app_secret
-				cookies.permanent.signed[:password] = password
-			end
-		end
-		@pia_url = pia_url
-		@app_key = app_key
-		@app_secret = app_secret
-
-		# puts "pia_url: " + pia_url.to_s
-		# puts "app_key: " + app_key.to_s
-		# puts "app_secret: " + app_secret.to_s
-		# puts "password: " + password.to_s
-
-		token = getToken(pia_url, app_key, app_secret).to_s
-		if token == ""
-			redirect_to app_config_path(pia_url: pia_url)
-			# redirect_to error_path(pia_url: pia_url)
+			redirect_to app_config_path
 			return
 		end
+
 		session[:token] = token
-
-		if password.to_s == ""
-			redirect_to password_path(pia_url: pia_url)
-			return
-		end
-		app = setupApp(pia_url, app_key, app_secret)
-		app["password"] = password.to_s
-		if getReadKey(app).nil?
-			if cookie_password
-				flash[:warning] = t('general.wrongCookiePassword')
-			else
-				flash[:warning] = t('general.wrongPassword')
-			end
-			redirect_to password_path(pia_url: pia_url, app_key: app_key, app_secret: app_secret)
-			return
-		end
 		if request.post?
 			redirect_to root_path
+		end
+
+		case pds_type
+		when "oyd"
+			tally_url = itemsUrl(app["pia_url"], "oyd.tally")
+			tally_data = readItems(app, tally_url)
+		when "ceps"
+			tally_url = host_url + "/ceps/query/eu.oyd.tallyzoo"
+			headers = defaultHeaders(token)
+			response = HTTParty.post(tally_url,
+                           			 headers: headers,
+                           			 body: {"collection_name": "overview"}.to_json)
+			tally_data = JSON(response.parsed_response.to_s)["results"] rescue []
+		end
+		@topics = []
+		tally_data.each do |item|
+			if item.key?("name") && item.key?("identifier") && item.key?("value") && item.key?("timestamp")
+				if !item.key?("hide")
+					@topics << item.stringify_keys
+				end
+			end
+		end unless tally_data.nil?
+		if @topics.count == 0
+			@topics = [{"name": "default",
+						"identifier": "oyd.tally.default",
+						"value": "0",
+						"timestamp": Time.now.utc.to_i}.stringify_keys]
 		end
 	end
 
@@ -187,21 +292,249 @@ class PagesController < ApplicationController
 		@app_secret = params[:app_secret]
 	end
 
-	def write_data
+	def write_tally(repo, tally_name, value)
+		case session[:pds_type].to_s
+		when "oyd"
+			if session[:oyd_app].nil?
+				app = setupApp(session[:pia_url], session[:app_key], session[:app_secret])
+				session[:oyd_app] = app
+			else
+				app = session[:oyd_app]
+			end
+			app["password"] = session[:password]
+			tally_url = itemsUrl(app["pia_url"], repo)
+			tally_data = { "timestamp" => DateTime.now.strftime('%s').to_i, "value": value.to_s }
+			retVal = writeOydItem(app, tally_url, tally_data)
+			tally_data = readItems(app, tally_url)
+			topic_value = nil
+			tally_data.each do |item|
+				cur_value = item["value"].to_i rescue 0
+				if topic_value.nil?
+					topic_value = cur_value
+				else
+					topic_value += cur_value
+				end
+			end unless tally_data.nil?
+			if topic_value.nil?
+				topic_value = value
+			end
+
+			tally_url = itemsUrl(app["pia_url"], "oyd.tally")
+			tally_data = readItems(app, tally_url)
+			topic_name = "default"
+			topic_identifier = "oyd.tally.default"
+			topic_color = "cyan"
+			topic_id = nil
+			tally_data.each do |item|
+				if item["identifier"].to_s == repo
+					topic_id = item["id"]
+					topic_name = item["name"]
+					topic_color = item["color"]
+					topic_identifier = item["identifier"]
+				end
+			end unless tally_data.nil?
+			record = { "name": topic_name,
+					   "identifier": topic_identifier,
+					   "value": topic_value.to_s,
+					   "color": topic_color.to_s,
+					   "timestamp": Time.now.utc.to_i }
+
+	        public_key_string = getWriteKey(app, "oyd.tally")
+	        public_key = [public_key_string].pack('H*')
+	        authHash = RbNaCl::Hash.sha256('auth'.force_encoding('ASCII-8BIT'))
+	        auth_key = RbNaCl::PrivateKey.new(authHash)
+	        box = RbNaCl::Box.new(public_key, auth_key)
+	        nonce = RbNaCl::Random.random_bytes(box.nonce_bytes)
+	        message = record.to_json
+	        msg = message.force_encoding('ASCII-8BIT')
+	        cipher = box.encrypt(nonce, msg)
+	        oyd_item = { "value" => cipher.unpack('H*')[0],
+	                     "nonce" => nonce.unpack('H*')[0],
+	                     "version" => "0.4" }
+
+	        if tally_data.nil?
+	        	retVal = writeItem(app, tally_url, oyd_item)
+	        else
+				if topic_id.nil?
+					return
+				end
+				retVal = updateItem(app, tally_url, oyd_item, topic_id)
+			end
+
+		when "ceps"
+			token = session[:ceps_token]
+			headers = defaultHeaders(token)
+			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/" + tally_name.to_s
+			tally_data = { "data": { "timestamp" => DateTime.now.strftime('%s').to_i, "value": value.to_s } }
+			response = HTTParty.post(tally_url,
+                           			 headers: headers,
+                           			 body: tally_data.to_json)
+
+			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo"
+			headers = defaultHeaders(token)
+			response = HTTParty.post(tally_url,
+                           			 headers: headers,
+                           			 body: {"collection_name": "overview"}.to_json).parsed_response
+			tally_data = JSON(response.to_s)["results"] rescue []
+			updated = false
+			tally_data.each do |item|
+				item_identifier = item["identifier"].to_s rescue ""
+				if item_identifier == repo.to_s && !item.key?("hide")
+					tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
+					tally_data = { "data": { "name": tally_name.to_s,
+										     "identifier": repo.to_s,
+										     "value": (item["value"].to_i+value).to_s,
+										     "color": item["color"].to_s,
+										     "timestamp": Time.now.utc.to_i },
+								   "options": { "update": true,
+								   				"data_object_id": item["_id"].to_s } }
+					response = HTTParty.post(tally_url,
+		                           			 headers: headers,
+		                           			 body: tally_data.to_json)
+					updated = true
+				end
+			end unless tally_data.nil?
+			if !updated
+				tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
+				tally_data = { "data": { "name": tally_name.to_s,
+									     "identifier": repo.to_s,
+									     "value": value.to_s,
+									     "timestamp": Time.now.utc.to_i } }
+				response = HTTParty.post(tally_url,
+	                           			 headers: headers,
+	                           			 body: tally_data.to_json).parsed_response
+
+			end
+
+		else
+			puts "unknown PDS_TYPE"
+		end
+
+	end
+
+	def delete_tally(repo, tally_name)
 		case session[:pds_type]
 		when "oyd"
-			puts "we are here"
 			app = setupApp(session[:pia_url], session[:app_key], session[:app_secret])
 			app["password"] = session[:password]
 			tally_url = itemsUrl(app["pia_url"], "oyd.tally")
-			tally_data = { "timestamp" => DateTime.now.strftime('%s').to_i }
-			retVal = writeOydItem(app, tally_url, tally_data)
+			tally_data = readItems(app, tally_url)
+			tally_data.each do |item|
+				if item["identifier"].to_s == repo
+					retVal = deleteItem(app, tally_url, item["id"])
+				end
+			end unless tally_data.nil?
+			repo_url = app["pia_url"].to_s + '/api/repos/' + repo.to_s + '/identifier'
+			headers = defaultHeaders(app["token"])
+	        response = HTTParty.get(repo_url, headers: headers).parsed_response.stringify_keys
+	        repo_id = response["id"].to_s
+	        repo_url = app["pia_url"].to_s + '/api/repos/' + repo_id
+	        response = HTTParty.delete(repo_url, headers: headers)
+	    when "ceps"
+			token = session[:ceps_token]
+			headers = defaultHeaders(token)
+			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo"
+			headers = defaultHeaders(token)
+			response = HTTParty.post(tally_url,
+                           			 headers: headers,
+                           			 body: {"collection_name": "overview"}.to_json).parsed_response
+			tally_data = JSON(response.to_s)["results"] rescue []
+			tally_data.each do |item|
+				item_identifier = item["identifier"].to_s rescue ""
+				if item_identifier == repo.to_s
+					tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
+					tally_data = { "data": { "name": tally_name.to_s,
+										     "identifier": repo.to_s,
+										     "value": item["value"].to_s,
+										     "color": item["color"].to_s,
+										     "timestamp": Time.now.utc.to_i,
+										     "hide": true },
+								   "options": { "update": true,
+								   				"data_object_id": item["_id"].to_s } }
+					response = HTTParty.post(tally_url,
+		                           			 headers: headers,
+		                           			 body: tally_data.to_json)
+				end
+			end
+
+	    end
+
+	end
+
+	def write_data
+		case params[:commit].to_s
+		when "increment"
+			tally_repo = params[:repo]
+			tally_name = params[:name]
+			write_tally(tally_repo, tally_name, 1)
+
+		when "delete"
+			tally_repo = params[:repo]
+			tally_name = params[:name]
+			delete_tally(tally_repo, tally_name)
 		else
-			puts "unknown PDS_TYPE"
+			puts "unknown action"
 		end
 		redirect_to root_path
 	end
 
+	def new_topic
+		case session[:pds_type].to_s
+		when "oyd"
+			app = setupApp(session[:pia_url], session[:app_key], session[:app_secret])
+			tally_url = itemsUrl(app["pia_url"], "oyd.tally")
+			new_item = { "name": params[:topic_name].to_s,
+				         "color": params[:topic_color].to_s,
+					     "identifier": "oyd.tally." + str2ascii(params[:topic_name].to_s),
+					     "value": "0",
+					     "timestamp": Time.now.utc.to_i }
+			retVal = writeOydItem(app, tally_url, new_item)
+		when "ceps"
+			token = session[:ceps_token]
+			headers = defaultHeaders(token)
+			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
+			tally_data = { "data": { "name": params[:topic_name].to_s,
+									 "color": params[:topic_color].to_s,
+								     "identifier": "oyd.tally." + str2ascii(params[:topic_name]).to_s,
+								     "value": "0",
+								     "timestamp": Time.now.utc.to_i } }
+			response = HTTParty.post(tally_url,
+                           			 headers: headers,
+                           			 body: tally_data.to_json).parsed_response
+
+		else
+			puts "unknown PDS Type"
+		end
+		redirect_to root_path
+		
+	end
+
+	def remove_topic
+		tally_repo = params[:tally_repo].to_s
+		tally_name = params[:tally_name].to_s
+		delete_tally(tally_repo, tally_name)
+		redirect_to root_path
+	end	
+
+	def increment
+		tally_repo = params[:tally_repo].to_s
+		tally_name = params[:tally_name].to_s
+		tally_increment = params[:tally_increment].to_i rescue 1
+		case params[:tally_command].to_s
+		when "increment"
+			write_tally(tally_repo, tally_name, tally_increment)
+		when "delete"
+			delete_tally(tally_repo, tally_name)
+		end
+		head 200, content_type: "text/html"
+	end
+
+	def password
+		@pia_url = params[:pia_url]
+		@app_key = params[:app_key]
+		@app_secret = params[:app_secret]
+	end
+		
 	def favicon
 		send_file 'public/favicon.ico', type: 'image/x-icon', disposition: 'inline'
 	end

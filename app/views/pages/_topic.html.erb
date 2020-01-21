@@ -1,0 +1,27 @@
+<div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom: 25px; padding-right: 0;">
+	<div style="height: 75px; background-color: <%= main_color(topic["color"]) %>; border-radius: 8px 8px 0 0; cursor: pointer;" onclick="$(this).css('background-color', '<%= select_color(topic["color"]) %>');$('#tally_repo').val('<%= topic["identifier"] %>');$('#tally_name').val('<%= topic["name"] %>');$('#tally_increment').val('1');$('#tally_command').val('increment');$('#tally_form').submit();el=$('#<%= topic["identifier"].gsub(".","\\\\\\.") + "_value" %>');el.text(parseInt(el.text())+1);$(this).delay(100).queue(function (next) { $(this).css('background-color', '<%= main_color(topic["color"]) %>'); next();});">
+		<div style="padding: 10px;">
+			<%= topic["name"].to_s %>
+			<div style="float: right;" id="<%= topic["identifier"] + "_value" %>">
+				<%= topic["value"].to_s %>
+			</div>
+		</div>
+	</div>
+	<div style="height: 30px; background-color: <%= footer_color(topic["color"]) %>; border-radius: 0  0 8px 8px;">
+		<div style="padding: 4px 10px;">
+			<div style="float: left; cursor: pointer;" onclick="alert('not implemented yet');">
+				<i class="fa fa-list-ul" aria-hidden="true"></i> <%= t('general.rec_list') %>
+			</div>
+			<div style="float: right; cursor: pointer;">
+                <div class="btn-group dropdown">
+                    <a href="#" class="dropdown-toggle fakelink" data-toggle="dropdown">
+                        <i class="fa fa-wrench" aria-hidden="true"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                    	<li><%= link_to t('general.delete'), remove_topic_path(tally_repo: topic["identifier"], tally_name: topic["name"]) %></li>
+                    </ul>
+                </div>
+			</div>
+		</div>
+	</div>
+</div>
