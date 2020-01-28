@@ -18,7 +18,8 @@
 					options_for_select(
 						{ t('config.select_label') => "select",
 						  "CEPS": "ceps",
-						  "OwnYourData": "oyd" },
+						  "OwnYourData": "oyd",
+						  "Personium": "personium" },
 						params[:ceps_type] || "select" ),
 					{},
 					class: "from-control",
@@ -52,7 +53,7 @@
 		</div>
 
 		<div class="form-group PDS CEPS" style="display: none;">
-			<label for="app_key" class="col-sm-3 control-label">Data Store URL:</label>
+			<label for="app_key" class="col-sm-3 control-label">Endpoint URL:</label>
 			<div class="col-sm-9">
 				<%= form.text_field :CEPS_URL, value: @ceps_url, class: "from-control", style: "width: 400px;" %>
 			</div>
@@ -70,7 +71,27 @@
 			</div>
 		</div>
 
-		<div class="form-group PDS OYD CEPS" style="display: none;">
+
+		<div class="form-group PDS PERSONIUM" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label">Endpoint URL:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :PERSONIUM_URL, value: @personium_url, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS PERSONIUM" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.username_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.text_field :PERSONIUM_USER, value: @personium_user, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+		<div class="form-group PDS PERSONIUM" style="display: none;">
+			<label for="app_key" class="col-sm-3 control-label"><%= t('config.password_label') %>:</label>
+			<div class="col-sm-9">
+				<%= form.password_field :PERSONIUM_PASSWORD, value: @personium_password, class: "from-control", style: "width: 400px;" %>
+			</div>
+		</div>
+
+		<div class="form-group PDS OYD CEPS PERSONIUM" style="display: none;">
 			<div class="col-sm-offset-3 col-sm-9">
 				<div class="checkbox">
 			    	<label>
@@ -80,7 +101,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="form-group PDS OYD CEPS" style="display: none;">
+		<div class="form-group PDS OYD CEPS PERSONIUM" style="display: none;">
 			<div class="col-sm-offset-3 col-sm-9">
 				<%= form.button t('general.submit') %>
 			</div>

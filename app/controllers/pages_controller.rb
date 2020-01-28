@@ -2,30 +2,6 @@ class PagesController < ApplicationController
 	include ApplicationHelper
 
 	def tally
-		desktop = params[:desktop].to_s
-		if desktop == ""
-			desktop = session[:desktop]
-			if desktop == ""
-				desktop = false
-			else
-				if desktop == "1"
-					desktop = true
-				else
-					desktop = false
-				end
-			end
-		else
-			if desktop == "1"
-				desktop = true
-			else
-				desktop = false
-			end
-		end
-		if desktop
-			session[:desktop] = "1"
-		else
-			session[:desktop] = "0"
-		end
 
 		pds_type = params[:pds_type].to_s
 		if pds_type.to_s == ""
@@ -45,6 +21,8 @@ class PagesController < ApplicationController
 		if pds_type.to_s != ""
 			session[:pds_type] = pds_type
 		end
+
+		puts "PDS: " + pds_type.to_s
 
 		case pds_type
 		when "oyd"
@@ -179,17 +157,6 @@ class PagesController < ApplicationController
 				session[:password] = password
 			end
 
-			# app["password"] = password.to_s
-			# if getReadKey(app).nil?
-			# 	if cookie_password
-			# 		flash[:warning] = t('general.wrongCookiePassword')
-			# 	else
-			# 		flash[:warning] = t('general.wrongPassword')
-			# 	end
-			# 	redirect_to password_path(pia_url: pia_url, app_key: app_key, app_secret: app_secret)
-			# 	return
-			# end
-
 			@pia_url = pia_url
 			@app_key = app_key
 			@app_secret = app_secret
@@ -244,6 +211,52 @@ class PagesController < ApplicationController
 					end
 				end
 			end
+
+		when "personium"
+			personium_url = params[:PERSONIUM_URL].to_s
+			if personium_url.to_s == ""
+				personium_url = session[:personium_url]
+				if personium_url.to_s == ""
+					personium_url = cookies.signed[:personium_url]
+				end
+			end
+			if personium_url.to_s != "" 
+				session[:personium_url] = personium_url
+			end
+			host_url = personium_url
+
+			personium_user = params[:PERSONIUM_USER].to_s
+			if personium_user.to_s == ""
+				personium_user = session[:personium_user]
+				if personium_user.to_s == ""
+					personium_user = cookies.signed[:personium_user]
+				end
+			end
+			if personium_user.to_s != ""
+				session[:personium_user] = personium_user
+			end
+
+			personium_password = params[:PERSONIUM_PASSWORD].to_s
+			if personium_password.to_s == ""
+				personium_password = session[:personium_password]
+				if personium_password.to_s == ""
+					personium_password = cookies.signed[:personium_password]
+				end
+			end
+			if personium_password.to_s != ""
+				session[:personium_password] = personium_password
+			end
+
+			token = getPersoniumToken(personium_url, personium_user, personium_password)
+			if token.to_s == ""
+				redirect_to app_config_path
+				return
+			end	
+			session[:personium_token] = token
+			if params[:remember].to_s == "1"
+				cookies.permanent.signed[:personium_token] = token
+			end
+
 		else
 			redirect_to app_config_path
 			return
@@ -265,6 +278,15 @@ class PagesController < ApplicationController
                            			 headers: headers,
                            			 body: {"collection_name": "overview"}.to_json)
 			tally_data = JSON(response.parsed_response.to_s)["results"] rescue []
+		when "personium"
+			tally_url = host_url + "/app-tally-zoo/attributes/overview.json"
+			headers = defaultHeadersPersonium(token)
+			response = HTTParty.get(tally_url,
+									headers: headers)
+			tally_data = nil
+			if response.code == 200
+				tally_data = response.parsed_response
+			end
 		end
 		@topics = []
 		tally_data.each do |item|
@@ -406,6 +428,71 @@ class PagesController < ApplicationController
 
 			end
 
+		when "personium"
+			token = session[:personium_token]
+			headers = defaultHeadersPersonium(token)
+			topic_value = nil
+
+			# create detail entry
+			tally_url = session[:personium_url] + "/app-tally-zoo/attributes/" + tally_name.to_s + ".json"
+			tally_data = { "timestamp" => DateTime.now.strftime('%s').to_i, "value": value.to_s }
+			response = HTTParty.get(tally_url, headers: headers)
+			if response.code == 200
+				data = response.parsed_response
+				data << tally_data
+				response = HTTParty.put(tally_url, headers: headers, body: data.to_json)
+				# iterate over each entry to get current sum
+				data.each do |item|
+					cur_value = item["value"].to_i rescue 0
+					if topic_value.nil?
+						topic_value = cur_value
+					else
+						topic_value += cur_value
+					end
+				end unless data.nil?
+				if topic_value.nil?
+					topic_value = value
+				else
+					topic_value += value
+				end
+			else
+				response = HTTParty.put(tally_url, headers: headers, body: [tally_data].to_json)
+				topic_value = value
+			end
+
+			# update overview
+			tally_url = session[:personium_url] + "/app-tally-zoo/attributes/overview.json"
+			response = HTTParty.get(tally_url, headers: headers)
+			if response.code == 200
+				new_data = []
+				data = response.parsed_response
+				data.each do |item|
+					if item["identifier"].to_s == repo
+						new_data << { "name": item["name"].to_s,
+									  "identifier": repo.to_s,
+									  "value": topic_value.to_s,
+									  "color": item["color"].to_s,
+									  "timestamp": Time.now.utc.to_i }
+					else
+						new_data << item
+					end
+				end unless tally_data.nil?
+				if new_data.count == 0
+					new_data = [{ "name": "default",
+								  "identifier": "oyd.tally.default",
+								  "value": topic_value.to_s,
+								  "color": "cyan",
+								  "timestamp": Time.now.utc.to_i }]
+				end
+			else
+				new_data = [{ "name": "default",
+							  "identifier": "oyd.tally.default",
+							  "value": topic_value.to_s,
+							  "color": "cyan",
+							  "timestamp": Time.now.utc.to_i }]
+			end
+			response = HTTParty.put(tally_url, headers: headers, body: new_data.to_json)
+
 		else
 			puts "unknown PDS_TYPE"
 		end
@@ -430,11 +517,11 @@ class PagesController < ApplicationController
 	        repo_id = response["id"].to_s
 	        repo_url = app["pia_url"].to_s + '/api/repos/' + repo_id
 	        response = HTTParty.delete(repo_url, headers: headers)
+
 	    when "ceps"
 			token = session[:ceps_token]
 			headers = defaultHeaders(token)
 			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo"
-			headers = defaultHeaders(token)
 			response = HTTParty.post(tally_url,
                            			 headers: headers,
                            			 body: {"collection_name": "overview"}.to_json).parsed_response
@@ -457,25 +544,26 @@ class PagesController < ApplicationController
 				end
 			end
 
+		when "personium"
+			token = session[:personium_token]
+			headers = defaultHeadersPersonium(token)
+			tally_url = session[:personium_url] + "/app-tally-zoo/attributes/overview.json"
+			response = HTTParty.get(tally_url, headers: headers)
+			if response.code == 200
+				new_data = []
+				data = response.parsed_response
+				data.each do |item|
+					if item["identifier"].to_s != repo
+						new_data << item
+					end
+				end unless data.nil?
+				response = HTTParty.put(tally_url, headers: headers, body: new_data.to_json)
+				tally_detail_url = session[:personium_url] + "/app-tally-zoo/attributes/" + tally_name.to_s + ".json"
+				response = HTTParty.delete(tally_detail_url, headers: headers)
+			end
+
 	    end
 
-	end
-
-	def write_data
-		case params[:commit].to_s
-		when "increment"
-			tally_repo = params[:repo]
-			tally_name = params[:name]
-			write_tally(tally_repo, tally_name, 1)
-
-		when "delete"
-			tally_repo = params[:repo]
-			tally_name = params[:name]
-			delete_tally(tally_repo, tally_name)
-		else
-			puts "unknown action"
-		end
-		redirect_to root_path
 	end
 
 	def new_topic
@@ -489,6 +577,7 @@ class PagesController < ApplicationController
 					     "value": "0",
 					     "timestamp": Time.now.utc.to_i }
 			retVal = writeOydItem(app, tally_url, new_item)
+
 		when "ceps"
 			token = session[:ceps_token]
 			headers = defaultHeaders(token)
@@ -502,19 +591,36 @@ class PagesController < ApplicationController
                            			 headers: headers,
                            			 body: tally_data.to_json).parsed_response
 
+		when "personium"
+			token = session[:personium_token]
+			headers = defaultHeadersPersonium(token)
+			tally_url = session[:personium_url] + "/app-tally-zoo/attributes/overview.json"
+
+			new_item = { "name": params[:topic_name].to_s,
+				         "color": params[:topic_color].to_s,
+					     "identifier": "oyd.tally." + str2ascii(params[:topic_name].to_s),
+					     "value": "0",
+					     "timestamp": Time.now.utc.to_i }
+
+			response = HTTParty.get(tally_url,
+									 headers: headers)
+			if response.code == 200
+				data = response.parsed_response
+				data << new_item
+				response = HTTParty.put(tally_url, headers: headers,
+					body: data.to_json)
+
+			else
+				response = HTTParty.put(tally_url, headers: headers,
+					body: [new_item].to_json)
+			end
+
 		else
 			puts "unknown PDS Type"
 		end
 		redirect_to root_path
 		
 	end
-
-	def remove_topic
-		tally_repo = params[:tally_repo].to_s
-		tally_name = params[:tally_name].to_s
-		delete_tally(tally_repo, tally_name)
-		redirect_to root_path
-	end	
 
 	def increment
 		tally_repo = params[:tally_repo].to_s

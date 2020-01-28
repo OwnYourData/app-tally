@@ -88,7 +88,7 @@ module ApplicationHelper
       return value.encode(Encoding.find('ASCII'), encoding_options)
     end
 
-# Basic functions to access PIA ====================
+# Basic functions to access a PDS ====================
     def getCepsToken(ceps_url, ceps_user, ceps_password)
         auth_url = ceps_url.to_s + "/ceps/app_token"
         begin
@@ -107,9 +107,49 @@ module ApplicationHelper
         end
     end
 
+    def getPersoniumToken(url, user, password)
+        require 'net/http'
+        require 'uri'
+
+        response = nil
+        begin
+            uri = URI.parse(url + "/__token")
+            request = Net::HTTP::Post.new(uri)
+            request.content_type = "application/x-www-form-urlencoded"
+            request["Accept"] = "application/json"
+            request.set_form_data(
+              "grant_type" => "password",
+              "p_cookie" => "false",
+              "password" => password,
+              "username" => user,
+            )
+
+            req_options = {
+              use_ssl: uri.scheme == "https",
+            }
+
+            response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+              http.request(request)
+            end
+        rescue => ex
+            response = nil
+        end
+        if response.nil?
+            nil
+        else
+            JSON(response.body.to_s)["access_token"].to_s rescue nil
+        end
+    end        
+
 # Basic functions to access PIA ====================
     def defaultHeaders(token)
       { 'Accept' => '*/*',
+        'Content-Type' => 'application/json',
+        'Authorization' => 'Bearer ' + token }
+    end
+
+    def defaultHeadersPersonium(token)
+      { 'Accept' => 'application/json',
         'Content-Type' => 'application/json',
         'Authorization' => 'Bearer ' + token }
     end
