@@ -626,13 +626,15 @@ class PagesController < ApplicationController
 		tally_repo = params[:tally_repo].to_s
 		tally_name = params[:tally_name].to_s
 		tally_increment = params[:tally_increment].to_i rescue 1
-		case params[:tally_command].to_s
-		when "increment"
-			write_tally(tally_repo, tally_name, tally_increment)
-		when "delete"
-			delete_tally(tally_repo, tally_name)
-		end
+		write_tally(tally_repo, tally_name, tally_increment)
 		head 200, content_type: "text/html"
+	end
+
+	def remove_topic
+		tally_repo = params[:tally_repo].to_s
+		tally_name = params[:tally_name].to_s
+		delete_tally(tally_repo, tally_name)
+		redirect_to root_path
 	end
 
 	def password

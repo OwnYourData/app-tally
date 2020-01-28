@@ -40,7 +40,7 @@ en:
     stop_edit: "Stop editing"
     cancel: "Cancel"
     save: "Save"
-    delete: "Löschen"
+    delete: "Delete"
     submit: "Continue"
     remember: "remember credentials"
     wrongPassword: "Error: wrong password"

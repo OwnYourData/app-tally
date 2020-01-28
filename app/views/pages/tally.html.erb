@@ -1,7 +1,6 @@
 <%= form_with url: increment_path, id: "tally_form" do |form| %>
 	<%= form.hidden_field :tally_repo %>
 	<%= form.hidden_field :tally_name %>
-	<%= form.hidden_field :tally_command %>
 	<%= form.hidden_field :tally_increment, value: "1" %>
 	<div class="row" style="padding-right: 15px;">
 		<%= render partial: "topic", collection: @topics %>
