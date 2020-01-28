@@ -220,6 +220,9 @@ class PagesController < ApplicationController
 					personium_url = cookies.signed[:personium_url]
 				end
 			end
+			if personium_url.last == "/"
+				personium_url = personium_url[0..-2]
+			end
 			if personium_url.to_s != "" 
 				session[:personium_url] = personium_url
 			end
