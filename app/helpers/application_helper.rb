@@ -90,23 +90,27 @@ module ApplicationHelper
 
 # Basic functions to access a PDS ====================
     def getCepsToken(ceps_url, ceps_user, ceps_password)
-        auth_url = ceps_url.to_s + "/ceps/app_token"
+        auth_url = ceps_url.to_s + "/oauth/token"
+        invalid_response = false
         begin
-            post_response = HTTParty.post(auth_url, 
+            response = HTTParty.post(auth_url, 
                 headers: { 'Content-Type' => 'application/json' },
-                body: { user_id: ceps_user, 
+                body: { username: ceps_user, 
                         password: ceps_password, 
-                        app_name: "eu.oyd.tallyzoo" }.to_json )
+                        client_id: "eu.oyd.tallyzoo",
+                        grant_type: "password" }.to_json )
         rescue => ex
-            post_response = nil
+            puts "Error: " + ex.to_s
+            invalid_response = true
         end
-        if post_response.nil?
+        if invalid_response || response.body.nil? || response.body.empty?
+            puts "invalid"
             nil
         else
-            JSON(post_response.parsed_response.to_s)["app_token"].to_s rescue nil
+            JSON(response.parsed_response.to_s)["access_token"].to_s rescue nil
         end
     end
-
+ 
     def getPersoniumToken(url, user, password)
         require 'net/http'
         require 'uri'

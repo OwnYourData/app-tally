@@ -162,6 +162,8 @@ class PagesController < ApplicationController
 			@app_secret = app_secret
 
 		when "ceps"
+			# get Token
+			# curl -H "Content-Type: application/json" -d '{"username":"christoph","password":"xxx","client_id":"eu.oyd.tallyzoo","grant_type":"password"}' -X POST https://ceps-freezr.glitch.me/oauth/token
 			ceps_url = params[:CEPS_URL].to_s
 			if ceps_url.to_s == ""
 				ceps_url = session[:ceps_url]
@@ -200,7 +202,11 @@ class PagesController < ApplicationController
 			if token == ""
 				token = cookies.signed[:ceps_token].to_s
 				if token == ""
+					puts "url: " + ceps_url.to_s
+					puts "user: " + ceps_user.to_s
+					puts "pwd: " + ceps_password.to_s
 					token = getCepsToken(ceps_url, ceps_user, ceps_password)
+					puts "token: " + token.to_s
 					if token.nil? || token == ""
 						redirect_to app_config_path
 						return
@@ -267,6 +273,7 @@ class PagesController < ApplicationController
 
 		session[:token] = token
 		if request.post?
+			puts "redirect POST"
 			redirect_to root_path
 		end
 
@@ -275,12 +282,10 @@ class PagesController < ApplicationController
 			tally_url = itemsUrl(app["pia_url"], "oyd.tally")
 			tally_data = readItems(app, tally_url)
 		when "ceps"
-			tally_url = host_url + "/ceps/query/eu.oyd.tallyzoo"
+			tally_url = host_url + "/ceps/query/eu.oyd.tallyzoo.overview"
 			headers = defaultHeaders(token)
-			response = HTTParty.post(tally_url,
-                           			 headers: headers,
-                           			 body: {"collection_name": "overview"}.to_json)
-			tally_data = JSON(response.parsed_response.to_s)["results"] rescue []
+			response = HTTParty.get(tally_url, headers: headers)
+			tally_data = JSON(response.parsed_response.to_s) rescue []
 		when "personium"
 			tally_url = host_url + "/app-tally-zoo/attributes/overview.json"
 			headers = defaultHeadersPersonium(token)
@@ -301,7 +306,7 @@ class PagesController < ApplicationController
 		end unless tally_data.nil?
 		if @topics.count == 0
 			@topics = [{"name": "default",
-						"identifier": "oyd.tally.default",
+						"identifier": "eu.oyd.tallyzoo.default",
 						"value": "0",
 						"timestamp": Time.now.utc.to_i}.stringify_keys]
 		end
@@ -387,44 +392,48 @@ class PagesController < ApplicationController
 			end
 
 		when "ceps"
+			# write record
+			# curl -H "Content-Type: application/json" -H "Accept: */*" -H "Authorization: Bearer xxx" -d '{"timestamp":"1581371613","value":1}' -X POST https://ceps-freezr.glitch.me/ceps/write/eu.oyd.tallyzoo.default
 			token = session[:ceps_token]
 			headers = defaultHeaders(token)
-			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/" + tally_name.to_s
-			tally_data = { "data": { "timestamp" => DateTime.now.strftime('%s').to_i, "value": value.to_s } }
+			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo." + tally_name.to_s
+			tally_data = { "timestamp" => DateTime.now.strftime('%s').to_i, "value": value.to_s }
 			response = HTTParty.post(tally_url,
                            			 headers: headers,
                            			 body: tally_data.to_json)
 
-			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo"
+			# query table
+			# curl  -H "Accept: */*" -H "Authorization: Bearer xxx" https://ceps-freezr.glitch.me/ceps/query/eu.oyd.tallyzoo.overview
+			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo.overview"
 			headers = defaultHeaders(token)
-			response = HTTParty.post(tally_url,
-                           			 headers: headers,
-                           			 body: {"collection_name": "overview"}.to_json).parsed_response
-			tally_data = JSON(response.to_s)["results"] rescue []
+			response = HTTParty.get(tally_url, headers: headers).parsed_response
+			tally_data = JSON(response.to_s) rescue []
 			updated = false
+puts "find repo: " + repo.to_s
 			tally_data.each do |item|
 				item_identifier = item["identifier"].to_s rescue ""
+puts "check: " + item_identifier.to_s
 				if item_identifier == repo.to_s && !item.key?("hide")
-					tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
-					tally_data = { "data": { "name": tally_name.to_s,
-										     "identifier": repo.to_s,
-										     "value": (item["value"].to_i+value).to_s,
-										     "color": item["color"].to_s,
-										     "timestamp": Time.now.utc.to_i },
-								   "options": { "update": true,
-								   				"data_object_id": item["_id"].to_s } }
-					response = HTTParty.post(tally_url,
+puts "match!"
+					tally_url = session[:ceps_url] + "/ceps/update/eu.oyd.tallyzoo.overview/" + item["_id"].to_s
+					tally_data = { "name": tally_name.to_s,
+								   "identifier": repo.to_s,
+								   "value": (item["value"].to_i+value).to_s,
+								   "color": item["color"].to_s,
+								   "timestamp": Time.now.utc.to_i }
+					response = HTTParty.put(tally_url,
 		                           			 headers: headers,
 		                           			 body: tally_data.to_json)
 					updated = true
 				end
 			end unless tally_data.nil?
 			if !updated
-				tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
-				tally_data = { "data": { "name": tally_name.to_s,
-									     "identifier": repo.to_s,
-									     "value": value.to_s,
-									     "timestamp": Time.now.utc.to_i } }
+puts "write overview"
+				tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo.overview"
+				tally_data = { "name": tally_name.to_s,
+							   "identifier": repo.to_s,
+							   "value": value.to_s,
+							   "timestamp": Time.now.utc.to_i }
 				response = HTTParty.post(tally_url,
 	                           			 headers: headers,
 	                           			 body: tally_data.to_json).parsed_response
@@ -524,26 +533,16 @@ class PagesController < ApplicationController
 	    when "ceps"
 			token = session[:ceps_token]
 			headers = defaultHeaders(token)
-			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo"
-			response = HTTParty.post(tally_url,
-                           			 headers: headers,
-                           			 body: {"collection_name": "overview"}.to_json).parsed_response
-			tally_data = JSON(response.to_s)["results"] rescue []
+			# fix-me: requires deleting the whole table
+			tally_url = session[:ceps_url] + "/ceps/query/eu.oyd.tallyzoo.overview"
+			response = HTTParty.get(tally_url,
+                          			headers: headers).parsed_response
+			tally_data = JSON(response.to_s) rescue []
 			tally_data.each do |item|
 				item_identifier = item["identifier"].to_s rescue ""
 				if item_identifier == repo.to_s
-					tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
-					tally_data = { "data": { "name": tally_name.to_s,
-										     "identifier": repo.to_s,
-										     "value": item["value"].to_s,
-										     "color": item["color"].to_s,
-										     "timestamp": Time.now.utc.to_i,
-										     "hide": true },
-								   "options": { "update": true,
-								   				"data_object_id": item["_id"].to_s } }
-					response = HTTParty.post(tally_url,
-		                           			 headers: headers,
-		                           			 body: tally_data.to_json)
+					tally_url = session[:ceps_url] + "/ceps/eu.oyd.tallyzoo.overview/" + item["_id"]
+					response = HTTParty.delete(tally_url, headers: headers)
 				end
 			end
 
@@ -584,12 +583,12 @@ class PagesController < ApplicationController
 		when "ceps"
 			token = session[:ceps_token]
 			headers = defaultHeaders(token)
-			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo/overview"
-			tally_data = { "data": { "name": params[:topic_name].to_s,
-									 "color": params[:topic_color].to_s,
-								     "identifier": "oyd.tally." + str2ascii(params[:topic_name]).to_s,
-								     "value": "0",
-								     "timestamp": Time.now.utc.to_i } }
+			tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo.overview"
+			tally_data = { "name": params[:topic_name].to_s,
+						   "color": params[:topic_color].to_s,
+						   "identifier": "eu.oyd.tallyzoo." + str2ascii(params[:topic_name]).to_s,
+						   "value": "0",
+						   "timestamp": Time.now.utc.to_i }
 			response = HTTParty.post(tally_url,
                            			 headers: headers,
                            			 body: tally_data.to_json).parsed_response

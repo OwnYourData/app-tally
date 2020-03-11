@@ -1,3 +1,36 @@
 rails s -p 4500
 
+curl -H "Content-Type: application/json" -d '{"username":"christoph","password":"xxx","client_id":"eu.oyd.tallyzoo","grant_type":"password"}' -X POST https://ceps-freezr.glitch.me/oauth/token
 
+curl -H "Content-Type: application/json" -H "Accept: */*" -H "Authorization: Bearer xxx" -d '{"timestamp":"1581371613","value":1}' -X POST https://ceps-freezr.glitch.me/ceps/write/eu.oyd.tallyzoo.default
+
+curl  -H "Accept: */*" -H "Authorization: Bearer xxx" https://ceps-freezr.glitch.me/ceps/query/eu.oyd.tallyzoo.overview
+
+
+def getCepsToken(ceps_url, ceps_user, ceps_password)
+    auth_url = ceps_url.to_s + "/oauth/token"
+    begin
+        invalid_response = false
+        response = HTTParty.post(auth_url, 
+            headers: { 'Content-Type' => 'application/json' },
+            body: { username: ceps_user, 
+                    password: ceps_password, 
+                    client_id: "eu.oyd.tallyzoo",
+                    grant_type: "password" }.to_json )
+    rescue => ex
+        invalid_response = true
+    end
+    if invalid_response || response.body.nil? || response.body.empty?
+        nil
+    else
+        JSON(post_response.parsed_response.to_s)["access_token"].to_s rescue nil
+    end
+end
+
+
+
+ceps_url = "https://ceps-freezr.glitch.me"
+host_url = ceps_url
+ceps_user = "christoph"
+ceps_password = "xxx" # <- update me from https://ceps-freezr.glitch.me/account/app_management
+token = getCepsToken(ceps_url, ceps_user, ceps_password)
