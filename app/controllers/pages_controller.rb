@@ -541,7 +541,7 @@ puts "write overview"
 			tally_data.each do |item|
 				item_identifier = item["identifier"].to_s rescue ""
 				if item_identifier == repo.to_s
-					tally_url = session[:ceps_url] + "/ceps/eu.oyd.tallyzoo.overview/" + item["_id"]
+					tally_url = session[:ceps_url] + "/ceps/delete/eu.oyd.tallyzoo.overview/" + item["_id"]
 					response = HTTParty.delete(tally_url, headers: headers)
 				end
 			end
