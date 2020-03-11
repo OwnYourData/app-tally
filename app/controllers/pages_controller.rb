@@ -22,8 +22,6 @@ class PagesController < ApplicationController
 			session[:pds_type] = pds_type
 		end
 
-		puts "PDS: " + pds_type.to_s
-
 		case pds_type
 		when "oyd"
 			pia_url = params[:PIA_URL].to_s
@@ -202,11 +200,7 @@ class PagesController < ApplicationController
 			if token == ""
 				token = cookies.signed[:ceps_token].to_s
 				if token == ""
-					puts "url: " + ceps_url.to_s
-					puts "user: " + ceps_user.to_s
-					puts "pwd: " + ceps_password.to_s
 					token = getCepsToken(ceps_url, ceps_user, ceps_password)
-					puts "token: " + token.to_s
 					if token.nil? || token == ""
 						redirect_to app_config_path
 						return
@@ -273,7 +267,6 @@ class PagesController < ApplicationController
 
 		session[:token] = token
 		if request.post?
-			puts "redirect POST"
 			redirect_to root_path
 		end
 
@@ -409,12 +402,9 @@ class PagesController < ApplicationController
 			response = HTTParty.get(tally_url, headers: headers).parsed_response
 			tally_data = JSON(response.to_s) rescue []
 			updated = false
-puts "find repo: " + repo.to_s
 			tally_data.each do |item|
 				item_identifier = item["identifier"].to_s rescue ""
-puts "check: " + item_identifier.to_s
 				if item_identifier == repo.to_s && !item.key?("hide")
-puts "match!"
 					tally_url = session[:ceps_url] + "/ceps/update/eu.oyd.tallyzoo.overview/" + item["_id"].to_s
 					tally_data = { "name": tally_name.to_s,
 								   "identifier": repo.to_s,
@@ -428,7 +418,6 @@ puts "match!"
 				end
 			end unless tally_data.nil?
 			if !updated
-puts "write overview"
 				tally_url = session[:ceps_url] + "/ceps/write/eu.oyd.tallyzoo.overview"
 				tally_data = { "name": tally_name.to_s,
 							   "identifier": repo.to_s,

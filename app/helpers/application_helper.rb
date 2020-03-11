@@ -149,7 +149,7 @@ module ApplicationHelper
     def defaultHeaders(token)
       { 'Accept' => '*/*',
         'Content-Type' => 'application/json',
-        'Authorization' => 'Bearer ' + token }
+        'Authorization' => 'Bearer ' + token.to_s }
     end
 
     def defaultHeadersPersonium(token)
